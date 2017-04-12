@@ -1,0 +1,19 @@
+{
+  "name": "harvard.cs50.phpliteadmin",
+  "description": "phpliteadmin editor for CS50 IDE",
+  "author": "CS50",
+  "contributors": [
+    {
+      "name": "Kareem Zidane",
+      "email": "kzidane@cs50.harvard.edu"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cs50/harvard.cs50.phpliteadmin"
+  },
+  "plugins": {
+    "phpliteadmin": {}
+  },
+  "licenses": []
+}
