@@ -1,7 +1,7 @@
 define(function(require, exports, module) {
     main.consumes = [
-        "c9", "dialog.error", "Editor", "editors", "layout", "tabManager",
-        "proc", "settings", "tree"
+        "c9", "dialog.error", "Editor", "editors", "layout", "MenuItem",
+        "menus", "tabManager", "proc", "settings", "tree"
     ];
     main.provides = ["harvard.cs50.browser"];
     return main;
@@ -11,6 +11,8 @@ define(function(require, exports, module) {
         var Editor = imports.Editor;
         var editors = imports.editors;
         var layout = imports.layout;
+        var MenuItem = imports.MenuItem;
+        var menus = imports.menus;
         var proc = imports.proc;
         var showError = imports["dialog.error"].show;
         var tabs = imports.tabManager;
@@ -21,6 +23,40 @@ define(function(require, exports, module) {
 
         var extensions = ["db", "db3", "sqlite", "sqlite3"];
         var handle = editors.register("browser", "Browser", Browser, extensions);
+        handle.addReloadItem = function() {
+
+            // add "Reload" item once
+            if (handle.reloadAdded)
+                return;
+
+            // context menu of tab button
+            handle.tabMenu = menus.get("context/tabs").menu;
+            if (!handle.tabMenu)
+                return;
+
+            // create "Reload" item
+            handle.reloadItem = new MenuItem({
+                caption: "Reload",
+                onclick: function() {
+                    var tab = tabs.focussedTab;
+                    if (tab.editorType === "browser")
+                        tab.editor.reloadTab(tab);
+                },
+                visible: false
+            });
+
+            // add "Reload" item to context menu
+            menus.addItemByPath("context/tabs/Reload", handle.reloadItem, 0, handle);
+            handle.reloadAdded = true;
+
+            // show "Reload" item only if tab is browser
+            handle.tabMenu.on("prop.visible", function(e) {
+                if (tabs.focussedTab.editorType === "browser" && e.value)
+                    handle.reloadItem.show();
+                else
+                    handle.reloadItem.hide();
+            });
+        };
 
         register(null, {
             "harvard.cs50.browser": handle
@@ -138,6 +174,9 @@ define(function(require, exports, module) {
             // draw editor
             plugin.on("draw", function(e) {
 
+                // add "Reload" menu item to tab button context menu
+                handle.addReloadItem();
+
                 // create and style iframe
                 iframe = document.createElement("iframe");
                 iframe.style.width = iframe.style.height = "100%";
@@ -150,6 +189,17 @@ define(function(require, exports, module) {
                 // append iframe
                 container.appendChild(iframe);
             });
+
+            /**
+             * Reloads current built-in browser tab
+             */
+            function reloadTab(tab) {
+                if (tab === currDoc.tab) {
+
+                    // iframe.contentWindow.location.reload violates same-origin
+                    updateIframeSrc(iframe.src);
+                }
+            }
 
             /**
              * Sets iframe's src attribute to url. If url is omitted, hides
@@ -270,7 +320,9 @@ define(function(require, exports, module) {
                 }
             });
 
-            plugin.freezePublicAPI({});
+            plugin.freezePublicAPI({
+                reloadTab: reloadTab
+            });
 
             plugin.load(null, "harvard.cs50.browser");
 
