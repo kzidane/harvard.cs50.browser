@@ -3,7 +3,7 @@ define(function(require, exports, module) {
         "c9", "dialog.error", "Editor", "editors", "layout", "tabManager",
         "proc", "settings", "tree"
     ];
-    main.provides = ["phpliteadmin"];
+    main.provides = ["harvard.cs50.browser"];
     return main;
 
     function main(options, imports, register) {
@@ -20,10 +20,10 @@ define(function(require, exports, module) {
         var extname = require("path").extname;
 
         var extensions = ["db", "db3", "sqlite", "sqlite3"];
-        var handle = editors.register("phpliteadmin", "Phpliteadmin", Phpliteadmin, extensions);
+        var handle = editors.register("browser", "Browser", Browser, extensions);
 
         register(null, {
-            "phpliteadmin": handle
+            "harvard.cs50.browser": handle
         });
 
         /**
@@ -55,11 +55,11 @@ define(function(require, exports, module) {
                     name: "phpliteadmin-tab",
                     document: {
                         title: "phpliteadmin",
-                        phpliteadmin: {
+                        browser: {
                             path: db.path
                         }
                     },
-                    editorType: "phpliteadmin",
+                    editorType: "browser",
                     active: true,
                     focus: true,
                     noanim: sel.length > 1
@@ -113,7 +113,7 @@ define(function(require, exports, module) {
         tree.tree.off("afterChoose", tree.openSelection);
         tree.tree.on("afterChoose", openSelection);
 
-        function Phpliteadmin(){
+        function Browser(){
             var plugin = new Editor("CS50", main.consumes, extensions);
             var emit = plugin.getEmitter();
 
@@ -144,6 +144,7 @@ define(function(require, exports, module) {
              * @param [string] url URL to set iframe's src to
              */
             function updateIframeSrc(url) {
+
                 // show loading spinner
                 currDoc.tab.classList.add("loading");
 
@@ -248,7 +249,7 @@ define(function(require, exports, module) {
 
             plugin.freezePublicAPI({});
 
-            plugin.load(null, "phpliteadmin");
+            plugin.load(null, "harvard.cs50.browser");
 
             return plugin;
         }

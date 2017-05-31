@@ -1,6 +1,6 @@
 {
-  "name": "harvard.cs50.phpliteadmin",
-  "description": "phpliteadmin editor for CS50 IDE",
+  "name": "harvard.cs50.browser",
+  "description": "",
   "author": "CS50",
   "contributors": [
     {
@@ -10,10 +10,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/cs50/harvard.cs50.phpliteadmin"
+    "url": "https://github.com/cs50/harvard.cs50.browser"
   },
   "plugins": {
-    "phpliteadmin": {}
+    "browser": {}
   },
   "licenses": []
 }
