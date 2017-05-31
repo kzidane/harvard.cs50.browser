@@ -51,6 +51,11 @@ define(function(require, exports, module) {
 
             // open last selected db file, selecting it back
             if (db) {
+                // just focus tab if phpliteadmin is running same db
+                var tab = tabs.findTab("phpliteadmin-tab");
+                if (tab && tab.document.lastState.browser.path === db.path)
+                    return tabs.focusTab(tab);
+
                 tabs.open({
                     name: "phpliteadmin-tab",
                     document: {
@@ -79,11 +84,11 @@ define(function(require, exports, module) {
             if (!path)
                 return;
 
-            // leading workspace is actually workspace directory
+            // leading / is actually ~/workspace/
             if (/^\//.test(path))
                 path = c9.workspaceDir + path;
 
-            // expand ~ as isn't expanded automatically
+            // manually expand ~ because not expanded automatically
             else if (/^~/.test(path))
                 path = path.replace(/^~/, c9.home);
 
