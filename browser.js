@@ -68,6 +68,14 @@ define(function(require, exports, module) {
                     active: true,
                     focus: true,
                     noanim: sel.length > 1
+                }, function (err, tab) {
+
+                    // kill phpliteadmin process when tab closed
+                    tab.on("close", function() {
+                        var process = tab.document.lastState.browser.process;
+                        if (!err && process)
+                            process.kill(15);
+                    });
                 });
 
                 tree.tree.selection.selectNode(db, true);
@@ -108,7 +116,7 @@ define(function(require, exports, module) {
                     var matches = data.match(/(https?:\/\/.+)\s/);
                     if (matches && matches[1]) {
                         process.stdout.off("data", handleOutput);
-                        callback(null, matches[1]);
+                        callback(null, matches[1], process);
                     }
                 });
             });
@@ -129,6 +137,7 @@ define(function(require, exports, module) {
 
             // draw editor
             plugin.on("draw", function(e) {
+
                 // create and style iframe
                 iframe = document.createElement("iframe");
                 iframe.style.width = iframe.style.height = "100%";
@@ -177,6 +186,7 @@ define(function(require, exports, module) {
             }
 
             plugin.on("documentLoad", function(e) {
+
                 // set current document and session
                 currDoc = e.doc;
                 currSession = currDoc.getSession();
@@ -233,23 +243,31 @@ define(function(require, exports, module) {
                 // set or update current db path
                 currSession.path = e.state.path;
 
+                // set or update current phpliteadmin process
+                currSession.process = e.state.process;
+
                 // spawn phpliteadmin
-                startPhpliteadmin(currSession.path, function(err, url){
+                startPhpliteadmin(currSession.path, function(err, url, process){
                     if (err)
                         return console.error(err);
 
                     // set or update session's url
                     currSession.url = url;
 
+                    // set or update phpliteadmin process
+                    currSession.process = process;
+
                     // notify about url change
                     emit("urlSet", { url: url });
                 });
             });
 
-            // remember db path between reload
+            // remember db path and phpliteadmin process between reload
             plugin.on("getState", function(e) {
-                if (currSession)
+                if (currSession) {
                     e.state.path = currSession.path;
+                    e.state.process = currSession.process;
+                }
             });
 
             plugin.freezePublicAPI({});
