@@ -225,14 +225,15 @@ define(function(require, exports, module) {
                     return;
                 }
 
-                // temp hack to prevent setting src too soon
-                setTimeout(function() {
-                    iframe.src = url;
-                    currDoc.tab.classList.remove("loading");
-                    iframe.style.display = "initial";
-                    loading = false;
-                }, 2000);
+                // update src
+                iframe.src = url;
 
+                // show iframe
+                iframe.style.display = "initial";
+
+                // hide loading spinner from tab button
+                currDoc.tab.classList.remove("loading");
+                loading = false;
             }
 
             plugin.on("documentLoad", function(e) {

@@ -2,5 +2,4 @@
 
 ### TODO
 
-* avoid using timeout
 * improve error checking and comments
