@@ -118,7 +118,6 @@ define(function(require, exports, module) {
             }
         }
 
-
         /**
          * Spawns phpliteadmin and calls callback, passing in url, or error
          *
@@ -297,6 +296,13 @@ define(function(require, exports, module) {
                 // set or update current phpliteadmin process
                 currSession.process = e.state.process;
 
+                // if phpliteadmin is already running, use url
+                if (e.state.url) {
+                    currSession.url = e.state.url;
+                    updateIframeSrc(currSession.url);
+                    return;
+                }
+
                 // spawn phpliteadmin
                 startPhpliteadmin(currSession.path, function(err, url, process){
                     if (err)
@@ -318,6 +324,7 @@ define(function(require, exports, module) {
                 if (currSession) {
                     e.state.path = currSession.path;
                     e.state.process = currSession.process;
+                    e.state.url = currSession.url;
                 }
             });
 
