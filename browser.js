@@ -232,7 +232,7 @@ define(function(require, exports, module) {
                 // hide iframe and reset its src if no url given
                 if (!url) {
                     iframe.style.display = "none";
-                    iframe.src = "";
+                    iframe.src = "about:blank";
                     loading = false;
                     return;
                 }
