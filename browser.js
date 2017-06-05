@@ -104,18 +104,31 @@ define(function(require, exports, module) {
                     active: true,
                     focus: true,
                     noanim: sel.length > 1
-                }, function (err, tab) {
-
-                    // kill phpliteadmin process when tab closed
-                    tab.on("close", function() {
-                        var process = tab.document.lastState.browser.process;
-                        if (!err && process)
-                            process.kill(15);
-                    });
-                });
+                }, handleTabClose);
 
                 tree.tree.selection.selectNode(db, true);
             }
+        }
+
+        /**
+         * Hooks event handler to kill phpliteadmin process associated with the
+         * document currently open in tab, when tab is closed.
+         */
+        function handleTabClose(err, tab) {
+            if (err)
+                return console.error(err);
+
+            // ensure handler hooked once
+            tab.off("close", handleTabClose);
+
+            // kill phpliteadmin when tab is closed
+            tab.on("close", function() {
+                var pid = tab.document.lastState.browser.pid;
+                if (!err && pid)
+
+                    // process.kill isn't available after reload (bug?)
+                    proc.spawn("kill", { args: ["-1", pid ]}, function() {});
+            });
         }
 
         /**
@@ -151,7 +164,7 @@ define(function(require, exports, module) {
                     var matches = data.match(/(https?:\/\/.+)\s/);
                     if (matches && matches[1]) {
                         process.stdout.off("data", handleOutput);
-                        callback(null, matches[1], process);
+                        callback(null, matches[1], process.pid);
                     }
                 });
             });
@@ -293,8 +306,10 @@ define(function(require, exports, module) {
                 // set or update current db path
                 currSession.path = e.state.path;
 
-                // set or update current phpliteadmin process
-                currSession.process = e.state.process;
+                // set or update current phpliteadmin pid
+                currSession.pid = e.state.pid;
+                if (currSession.pid)
+                    handleTabClose(null, currDoc.tab);
 
                 // if phpliteadmin is already running, use url
                 if (e.state.url) {
@@ -304,26 +319,26 @@ define(function(require, exports, module) {
                 }
 
                 // spawn phpliteadmin
-                startPhpliteadmin(currSession.path, function(err, url, process){
+                startPhpliteadmin(currSession.path, function(err, url, pid){
                     if (err)
                         return console.error(err);
 
                     // set or update session's url
                     currSession.url = url;
 
-                    // set or update phpliteadmin process
-                    currSession.process = process;
+                    // set or update phpliteadmin pid
+                    currSession.pid = pid;
 
                     // notify about url change
                     emit("urlSet", { url: url });
                 });
             });
 
-            // remember db path and phpliteadmin process between reload
+            // remember state between reloads
             plugin.on("getState", function(e) {
                 if (currSession) {
                     e.state.path = currSession.path;
-                    e.state.process = currSession.process;
+                    e.state.pid = currSession.pid;
                     e.state.url = currSession.url;
                 }
             });
