@@ -1,15 +1,17 @@
 define(function(require, exports, module) {
     main.consumes = [
-        "c9", "dialog.error", "Editor", "editors", "layout", "MenuItem",
-        "menus", "tabManager", "proc", "settings", "tree"
+        "c9", "commands", "dialog.error", "Editor", "editors", "fs", "layout",
+        "MenuItem", "menus", "tabManager", "proc", "settings", "tree"
     ];
     main.provides = ["harvard.cs50.browser"];
     return main;
 
     function main(options, imports, register) {
         var c9 = imports.c9;
+        var commands = imports.commands;
         var Editor = imports.Editor;
         var editors = imports.editors;
+        var fs = imports.fs;
         var layout = imports.layout;
         var MenuItem = imports.MenuItem;
         var menus = imports.menus;
@@ -19,7 +21,11 @@ define(function(require, exports, module) {
         var settings = imports.settings;
         var tree = imports.tree;
 
+        var _ = require("lodash");
+        var basename = require("path").basename;
         var extname = require("path").extname;
+
+        var BROWSER_VER = 1;
 
         var extensions = ["db", "db3", "sqlite", "sqlite3"];
         var handle = editors.register("browser", "Browser", Browser, extensions);
@@ -58,6 +64,62 @@ define(function(require, exports, module) {
             });
         };
 
+        function openBrowserTab(options, onClose) {
+            tabs.open({
+                name: options.name || "browser-tab",
+                document: {
+                    title: options.title || "browser",
+                    browser: {
+                        content: options.content,
+                        path: options.path
+                    }
+                },
+                editorType: "browser",
+                active: true,
+                focus: true,
+            }, onClose || function() {});
+        }
+
+        commands.addCommand({
+            name: "browser",
+            exec: function(args) {
+                if (!_.isArray(args) || args.length !== 2 || !_.isString(args[1]))
+                    return console.error("Usage: c9 exec browser path");
+
+                fs.readFile(args[1], function(err, data) {
+                    if (err)
+                        throw err;
+
+                    // remove shebang (if present)
+                    data = data.replace(/^#!\/usr\/bin\/env browser\s+$/m, "");
+
+                    openBrowserTab({
+                        title: basename(args[1]),
+                        content: data
+                    });
+
+                });
+             }
+        }, handle);
+
+        var browserPath = "~/bin/browser";
+        fs.exists(browserPath, function(exists) {
+            var ver = settings.getNumber("user/cs50/simple/@browser");
+            if (!exists || isNaN(ver) || ver < BROWSER_VER) {
+                fs.writeFile(browserPath, require("text!./bin/browser"), function(err) {
+                    if (err)
+                        throw err;
+
+                    fs.chmod(browserPath, 755, function(err) {
+                        if (err)
+                            throw err;
+
+                        settings.set("user/cs50/simple/@browser", BROWSER_VER);
+                    });
+                });
+            }
+        });
+
         register(null, {
             "harvard.cs50.browser": handle
         });
@@ -92,18 +154,10 @@ define(function(require, exports, module) {
                 if (tab && tab.document.lastState.browser.path === db.path)
                     return tabs.focusTab(tab);
 
-                tabs.open({
+                openBrowserTab({
                     name: "phpliteadmin-tab",
-                    document: {
-                        title: "phpliteadmin",
-                        browser: {
-                            path: db.path
-                        }
-                    },
-                    editorType: "browser",
-                    active: true,
-                    focus: true,
-                    noanim: sel.length > 1
+                    title: "phpliteadmin",
+                    path: db.path
                 }, handleTabClose);
 
                 tree.tree.selection.selectNode(db, true);
@@ -209,43 +263,52 @@ define(function(require, exports, module) {
                 if (tab === currDoc.tab) {
 
                     // iframe.contentWindow.location.reload violates same-origin
-                    updateIframeSrc(iframe.src);
+                    updateIframe({ url: iframe.src });
                 }
             }
 
-            /**
-             * Sets iframe's src attribute to url. If url is omitted, hides
-             * iframe and resets its src.
-             *
-             * @param [string] url URL to set iframe's src to
-             */
-            function updateIframeSrc(url) {
+            function updateIframe(options) {
 
-                // show loading spinner
-                currDoc.tab.classList.add("loading");
-
+                // prevent updating while we're updating
                 if (loading)
                     return;
 
-                loading = true;
+                // hide iframe
+                iframe.style.display = "none";
 
-                // hide iframe and reset its src if no url given
-                if (!url) {
-                    iframe.style.display = "none";
-                    iframe.src = "about:blank";
-                    loading = false;
-                    return;
+                // if we're not just emptying iframe
+                if (options) {
+
+                    // show loading spinner
+                    currDoc.tab.classList.add("loading");
+                    loading = true;
+                    iframe.onload = function () {
+
+                        // avoid triggering this infinitely since we may set src
+                        iframe.onload = function() {};
+
+                        // if url provided
+                        if (options.url) {
+                            currSession.url = options.url;
+                            iframe.src = options.url;
+                        }
+                        else if (options.content) {
+                            currSession.content = options.content;
+                            iframe.contentWindow.document.open();
+                            iframe.contentWindow.document.write(options.content);
+                            iframe.contentWindow.document.close();
+                        }
+
+                        // show iframe back
+                        iframe.style.display = "initial";
+
+                        // hide loading spinner from tab button
+                        currDoc.tab.classList.remove("loading");
+                        loading = false;
+                    }
                 }
 
-                // update src
-                iframe.src = url;
-
-                // show iframe
-                iframe.style.display = "initial";
-
-                // hide loading spinner from tab button
-                currDoc.tab.classList.remove("loading");
-                loading = false;
+                iframe.src = "about:blank";
             }
 
             plugin.on("documentLoad", function(e) {
@@ -254,10 +317,15 @@ define(function(require, exports, module) {
                 currDoc = e.doc;
                 currSession = currDoc.getSession();
 
-                // set or update iframe's src when url is set or changed
-                plugin.on("urlSet", function(e) {
-                    updateIframeSrc(e.url);
+                // when content should be written to iframe
+                plugin.on("contentSet", function(content) {
+                    updateIframe({ content: content })
                 });
+
+                // when iframe src should be set
+                plugin.on("urlSet", function (url) {
+                    updateIframe({ url: url });
+                })
 
                 /**
                  * Toggles editor's theme based on current skin.
@@ -293,54 +361,72 @@ define(function(require, exports, module) {
                 setTheme({ theme: settings.get("user/general/@skin") });
             });
 
+            plugin.on("documentActivate", function(e) {
+                // set current document and session
+                currDoc = e.doc;
+                currSession = currDoc.getSession();
+
+                if (currSession.url)
+                    updateIframe({ url: currSession.url });
+                else if (currSession.content)
+                    updateIframe({ content: currSession.content });
+            });
+
             // when path changes
             plugin.on("setState", function(e) {
+
+                // reset and hide iframe
+                updateIframe();
 
                 // update current document and session
                 currDoc = e.doc;
                 currSession = currDoc.getSession();
 
-                // reset iframe src
-                updateIframeSrc();
-
                 // set or update current db path
                 currSession.path = e.state.path;
 
                 // set or update current phpliteadmin pid
-                currSession.pid = e.state.pid;
-                if (currSession.pid)
+                if (e.state.pid) {
+                    currSession.pid = e.state.pid;
                     handleTabClose(null, currDoc.tab);
+                }
 
                 // if phpliteadmin is already running, use url
                 if (e.state.url) {
                     currSession.url = e.state.url;
-                    updateIframeSrc(currSession.url);
-                    return;
+                    updateIframe({ url: currSession.url });
                 }
 
-                // spawn phpliteadmin
-                startPhpliteadmin(currSession.path, function(err, url, pid){
-                    if (err)
-                        return console.error(err);
+                // handle SDL programs
+                else if (e.state.content) {
+                    currSession.content = e.state.content;
+                    emit("contentSet", currSession.content);
+                }
 
-                    // set or update session's url
-                    currSession.url = url;
+                // handle database files
+                else {
+                    startPhpliteadmin(currSession.path, function(err, url, pid) {
+                        if (err)
+                            return console.error(err);
 
-                    // set or update phpliteadmin pid
-                    currSession.pid = pid;
+                        // set or update session's url
+                        currSession.url = url;
 
-                    // notify about url change
-                    emit("urlSet", { url: url });
-                });
+                        // set or update phpliteadmin pid
+                        currSession.pid = pid;
+
+                        // notify about url change
+                        emit("urlSet", url);
+                    });
+                }
             });
 
             // remember state between reloads
             plugin.on("getState", function(e) {
-                if (currSession) {
-                    e.state.path = currSession.path;
-                    e.state.pid = currSession.pid;
-                    e.state.url = currSession.url;
-                }
+                e.state.content = e.doc.getSession().content;
+                e.state.path = e.doc.getSession().path;
+                e.state.pid = e.doc.getSession().pid;
+                e.state.url = e.doc.getSession().url;
             });
 
             plugin.freezePublicAPI({
