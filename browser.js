@@ -261,9 +261,11 @@ define(function(require, exports, module) {
              */
             function reloadTab(tab) {
                 if (tab === currDoc.tab) {
-
                     // iframe.contentWindow.location.reload violates same-origin
-                    updateIframe({ url: iframe.src });
+                    if (currSession.url)
+                        updateIframe({ url: iframe.src });
+                    else if (currSession.content)
+                        updateIframe({ content: currSession.content });
                 }
             }
 
