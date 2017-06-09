@@ -91,7 +91,7 @@ define(function(require, exports, module) {
                         throw err;
 
                     // remove shebang (if present)
-                    data = data.replace(/^#!\/usr\/bin\/env browser\s+$/m, "");
+                    data = data.replace(/^#!\/usr\/bin\/env browser\s*$/m, "");
 
                     openBrowserTab({
                         title: basename(args[1]),
