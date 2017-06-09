@@ -1,11 +1,10 @@
 # harvard.cs50.browser
 
-phpliteadmin editor for CS50 IDE.
-
 ### TODO
 
-* avoid using timeout
-* spawn phpliteadmin only when path changes
-* add reload button
-* kill phpliteadmin process on tab close
 * improve error checking and comments
+* support URLs with c9 exec browser
+* improve code and add more comments
+* detect and preserve URL change
+* suspend after reloading IDE
+* iframe for each tab?
