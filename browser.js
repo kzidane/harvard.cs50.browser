@@ -24,6 +24,7 @@ define(function(require, exports, module) {
         var _ = require("lodash");
         var basename = require("path").basename;
         var extname = require("path").extname;
+        var join = require("path").join;
 
         var BROWSER_VER = 1;
 
@@ -86,11 +87,21 @@ define(function(require, exports, module) {
                 if (!_.isArray(args) || args.length !== 2 || !_.isString(args[1]))
                     return console.error("Usage: c9 exec browser path");
 
+                // open phpliteadmin tab for database files
+                if (extensions.indexOf(extname(args[1]).substring(1)) > -1) {
+                    return openBrowserTab({
+                        name: "phpliteadmin-tab",
+                        title: "phpliteadmin",
+                        path: join(args[0], args[1])
+                    }, handleTabClose);
+                }
+
+                // open SDL programs in built-in browser tab
                 fs.readFile(args[1], function(err, data) {
                     if (err)
                         throw err;
 
-                    // remove shebang (if present)
+                    // remove shebang
                     data = data.replace(/^#!\/usr\/bin\/env browser\s*$/m, "");
 
                     openBrowserTab({
@@ -193,14 +204,6 @@ define(function(require, exports, module) {
         function startPhpliteadmin(path, callback) {
             if (!path)
                 return;
-
-            // leading / is actually ~/workspace/
-            if (/^\//.test(path))
-                path = c9.workspaceDir + path;
-
-            // manually expand ~ because not expanded automatically
-            else if (/^~/.test(path))
-                path = path.replace(/^~/, c9.home);
 
             // spawn phpliteadmin
             proc.spawn("phpliteadmin", { args: [path] }, function(err, process) {
