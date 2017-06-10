@@ -89,10 +89,16 @@ define(function(require, exports, module) {
 
                 // open phpliteadmin tab for database files
                 if (extensions.indexOf(extname(args[1]).substring(1)) > -1) {
+
+                    // join cwd and path only if path is relative
+                    var path = args[1].startsWith("/")
+                        ? args[1]
+                        : join(args[0], args[1]);
+
                     return openBrowserTab({
                         name: "phpliteadmin-tab",
                         title: "phpliteadmin",
-                        path: join(args[0], args[1])
+                        path: path
                     }, handleTabClose);
                 }
 
