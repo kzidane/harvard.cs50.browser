@@ -6,5 +6,4 @@ else
     C9="/mnt/shared/sbin/c9"
 fi
 
-# must s/$HOME/~/ to support files under ~
-$C9 exec browser $(readlink -f "$1" | sed "s#^$HOME#~#")
+$C9 exec browser "$1"
