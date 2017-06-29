@@ -254,9 +254,10 @@ define(function(require, exports, module) {
 
                 // create and style iframe
                 iframe = document.createElement("iframe");
-                iframe.style.width = iframe.style.height = "100%";
+                iframe.style.background = "white";
                 iframe.style.borderWidth = "0";
                 iframe.style.display = "none";
+                iframe.style.width = iframe.style.height = "100%";
 
                 // remember container
                 container = e.htmlNode;
